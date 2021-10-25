@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% from "base/header.html" import header %}
+
+{% block title %}
+Index
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style type="text/css">
+    .mouseonover-green :hover{
+        color: green;
+    }
+</style>
+<script>
+
+</script>
+{% endblock %}
+
+{% block content %}
+
+{{header("Scan Setup")}}
+
+<div class="card">
+    <div class="card-body">
+        <table id="example" class="display" style="min-width: 200px;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Command</th>
+                    <th>Short Name</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                {% for i in range(50) %}
+                
+                <tr>
+                    <td>{{i}}</td>
+                    <td>System Architect</td>
+                    <td>Edinburgh</td>
+                    <td>61</td>
+                    <td id="data_table_actions">
+
+                        <span class="fa fa-pencil"  style="padding: 7px;" 
+                            onmouseover="this.style.color='orange';" onmouseleave="this.style.color = ''"
+                            onclick="get_current_row(this.parentElement.parentElement)"
+                        >
+                        </span>
+                        <span class="fa fa-trash" style="padding: 7px;"
+                           onmouseover="this.style.color='red';" onmouseleave="this.style.color = ''"
+                           onclick="get_current_row(this.parentElement.parentElement)"
+                        >
+
+                        </span>
+                    </td>
+                </tr>
+                    
+                {% endfor %}
+                    
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th>Office</th>
+                    <th>Age</th>
+                    <th>Action</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ super() }}
+<script>
+
+    function get_current_row(element){
+        console.log(element)
+    };
+    $(document).ready(function() {
+            
+        $('#example').DataTable( {
+            "aoColumnDefs" : [ 
+                { 'bSortable': false, 'aTargets': [ 4 ] }
+            ],
+            "bDestroy": true
+            });
+
+    });
+</script>
+
+{% endblock %}

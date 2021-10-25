@@ -1,0 +1,29 @@
+{%- macro header(page_header_name) -%}
+
+
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="breadcrumb-range-picker">
+                
+                <h3>{{page_header_name}}</h3>
+    <!--             
+                <span><i class="icon-calender"></i></span>
+                <span class="ml-1">August 08, 2017 - August 08, 2017</span>
+                -->
+            </div>
+        </div>
+        <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
+            <ol class="breadcrumb">
+                {% for path_url_name_ in url_for(request.endpoint).split("/")  %}
+                    {% if path_url_name_ != "" %}
+                        <li class="breadcrumb-item"><a href="javascript:void(0)" style="color: deeppink;">{{path_url_name_}}</a></li>
+                    {% else %}
+
+                    {% endif %}
+                    
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+
+{%- endmacro %}
