@@ -1,3 +1,6 @@
+# Exclude min.js and css
+!*.min.*
+
 # Ignore env folder
 env
 # Byte-compiled / optimized / DLL files
