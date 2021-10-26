@@ -2,6 +2,7 @@
 ### Git Cheatsheet
 ![](docs/assets/gitsheet.png)
 ### Git notes
+###### Delete tag or brance
 `git push origin :tagname`
 Or, more expressively, use the --delete option (or -d if your git version is older than 1.8.0):
 
