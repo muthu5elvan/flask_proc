@@ -1,7 +1,7 @@
 from flask import render_template
 from app import app
 
-scan_setup_html = "scan/scan_setup.html"
+scan_setup_html = "scan/setup.html"
 
 @app.route("/scan/setup")
 def scan_setup():

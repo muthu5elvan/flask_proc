@@ -1,7 +1,7 @@
 from flask import render_template
 from app import app
 
-shell_log_html = "shell/shell_log.html"
+shell_log_html = "shell/log.html"
 shell_result_html = "shell/shell_result.html"
 
 @app.route("/shell/log")
