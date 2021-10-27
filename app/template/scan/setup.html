@@ -11,6 +11,9 @@ Startup Setup
     <link href="/static/assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="/static/assets/libs/datatables.net-autofill-bs4/css/autoFill.bootstrap4.min.css">
 
+    <style>
+    </style>
+
 {% endblock  %}
     
 {% block body %}
@@ -20,34 +23,45 @@ Startup Setup
 <div class="card">
     <div class="card-body overflow-auto">
 
-        <h4 class="card-title">Default Datatable</h4>
-        <p class="card-title-desc">DataTables has most features enabled by
-            default, so all you need to do to use it with your own tables is to call
-            the construction function: <code>$().DataTable();</code>.
+        <h4 class="card-title">Scan Steps</h4>
+        <p class="card-title-desc">
         </p>
 
-        <table id="datatable" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;">
+        <table id="datatable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px;">
             <thead>
-            <tr>
+            <tr class="bg-primary">
+                <th style="width: 5px">#</th>
                 <th>Name</th>
                 <th>Position</th>
                 <th>Office</th>
                 <th>Age</th>
                 <th>Start date</th>
                 <th>Salary</th>
+                <th>Option</th>
             </tr>
             </thead>
 
 
             <tbody>
                 {% for i in range(40) %}
-                    <tr>
-                        <td>{{i}}Tiger Nixon</td>
+                    <tr class="" onmousedown="removeChildTable(this)" title ="Hold and drag">
+                        <td ondblclick="addChildTable(this)" ><i class="ti-angle-down" title ="Double Click to Expand"></i></td>
+                        <td class="data-id">{{i}}Tiger Nixon</td>
                         <td>{{i}}System Architect</td>
                         <td>{{i}}Edinburgh</td>
                         <td>{{i}}61</td>
                         <td>20{{i}}/04/25</td>
                         <td>${{i}}0,800</td>
+                        <td>
+                            <div class="btn-group mr-1 mt-2 ">
+                                <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                                <div class="dropdown-menu" style="min-width: 10px;">
+                                    <a class="dropdown-item" href="#">Edit</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="#">Delete</a>
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                 
                 {% endfor %}
@@ -68,23 +82,194 @@ Startup Setup
     <script src="/static/assets/libs/datatables.net-autofill-bs4/js/autoFill.bootstrap4.min.js"></script>
 
     <script>
-        $("#datatable").DataTable({
+        var table =$("#datatable").DataTable({
+            order: [],
+            columnDefs: [
+                    { orderable: false, targets: 0, }
+                ]
         });
+        /*/<!-- Table row Drag -->*/
+        
+        $(function () {
+            $('tbody').sortable({
+                start: function (event, ui) {
+                    
+                    $(ui.item).addClass("text-info")
+                },
+                stop:function(event,ui){
+                    table.$('tr.text-info').removeClass('text-info');
+                },
+                update: function(event, ui) {
+                    $.each(table.$(".data-id").toArray(), function(index , row){
+                        
+                        console.log($(row).text())
+                    }) 
+                    
+                }
+            });
+        });
+        const getMethods = (obj) => {
+            let properties = new Set()
+            let currentObj = obj
+            do {
+              Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
+            } while ((currentObj = Object.getPrototypeOf(currentObj)))
+            return [...properties.keys()].filter(item => typeof obj[item] === 'function')
+          }
+        
+        function removeChildTable(firstCell){
+            console.log("removechild table")
+            table.row(table.$('tr.text-info')).child.hide()
+            $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
+            $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+        }
+        function addChildTable(firstCell){
+            var child_table=`<table  id="testdata" class="table table-bordered dt-responsive nowrap" style="border-inline-color: red ;">
+                <thead class="text-success">
+                    
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th>Office</th>
+                    <th>Age</th>
+                    <th>Start date</th>
+                    <th>Salary</th>
+                </thead>
+                <tbody>
+                    
+                    {% for i in range(10) %}
+                        <tr>
+                            <td>{{i}}Tiger Nixon</td>
+                            <td>{{i}}System Architect</td>
+                            <td>{{i}}Edinburgh</td>
+                            <td>{{i}}61</td>
+                            <td>20{{i}}/04/25</td>
+                            <td>$ {{i}}0,800</td>
+                        </tr>
+                
+                    {% endfor %}
+                </tbody>
+            </table>`
+            
+            var icon=$(firstCell).children()[0]
+            if($(table.$('tr.text-info')).length==0){
+                if (icon.classList.contains("ti-angle-down")){
+                    console.log("add childtable")
+                    var tr=table.row($(firstCell.parentElement))
+                    var tr_row=$(firstCell).parent()
+                    $(tr_row).addClass("text-info")
+                    //console.log(tr)
+                    tr.child(child_table).show()
+                    icon.classList.replace("ti-angle-down","ti-angle-double-down")
 
-        $('#datatable tbody').on('click', 'td.details-control', function () {
-            var tr = $(this).closest('tr:first-child');
+                    
+                    table_testdata=$("#testdata").DataTable({
+                        destroy:true,
+                        pageLength : 5,
+                        lengthMenu: [[5, 10, 20], [5, 10, 20]]
+                    });
+                    
+                }else{
+                    console.log("remove childtable")
+                    var tr_row=$(firstCell).parent()
+                    $(tr_row).removeClass("text-info")
+                    var tr=table.row($(firstCell.parentElement))
+                    icon.classList.replace("ti-angle-double-down","ti-angle-down")
+                    tr.child().hide()
+                    
+                }
+                    
+            }else if(icon.classList.contains("ti-angle-down")){
+                
+                table_testdata.clear().destroy();
+                    
+                $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
+                $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                table.row(table.$('tr.text-info')).child.hide()
+                table.$('tr.text-info').removeClass("text-info")
+                $('#testdata').empty();
+
+                var tr=table.row($(firstCell.parentElement))
+                var tr_row=$(firstCell).parent()
+                $(tr_row).addClass("text-info")
+                //console.log(tr)
+                tr.child(child_table).show()
+                icon.classList.replace("ti-angle-down","ti-angle-double-down")
+
+                
+                table_testdata=$("#testdata").DataTable({
+                    destroy:true,
+                    pageLength : 5,
+                    lengthMenu: [[5, 10, 20], [5, 10, 20]]
+                });
+                
+
+            }
+            else{
+                
+                try{
+                    console.log("search remove childtable")
+                    table_testdata.clear().destroy();
+                    
+                    $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
+                    $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                    table.row(table.$('tr.text-info')).child.hide()
+                    table.$('tr.text-info').removeClass("text-info")
+                    $('#testdata').empty();
+                    
+                }catch(e){
+                    console.log(e)
+                    console.log("search error remove childtable")
+                    table.row(table.$('tr.text-info')).child.hide()
+                    $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
+                    $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                    table.$('tr.text-info').removeClass("text-info")
+                    $('#testdata').empty();
+                    
+                }
+
+            }
+            
+        }
+
+        /*$('tr').mousedown(function(event){
+            table.row($('tr.text-warning')).child.hide()
+            this.classList.add("text-warning")
+        });
+        $("tr").mouseup(function(event){
+            table.$('tr.text-warning').removeClass('text-warning');
+            table.$('tr.shown').removeClass('shown');
+        })
+        
+        /*      DELETE SELECTED ROW
+        $('#button').click( function () {
+            table.row('.selected').remove().draw( false );
+        } );*/
+        
+        /*
+        $('#datatable tbody').on('dblclick', 'tr td:first-child', function () {
+            var tr = $(this).closest('tr');
             var row = table.row( tr );
      
             if ( row.child.isShown() ) {
                 // This row is already open - close it
                 row.child.hide();
                 tr.removeClass('shown');
+                tr.removeClass('text-info');
             }
             else {
+                
+                table.row(table.$('tr.text-info')).child.hide()
+                table.row($('tr.shown')).child.hide()
+                table.$('tr.text-info').removeClass('text-info');
+                table.$('tr.shown')
+                table.$('tr.shown').removeClass('shown');
+
+                tr.addClass('text-info');
+                
                 // Open this row
                 row.child( `
-                <table  id="" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;">
-                    <thead>
+                <table  id="testdata" class="table table-bordered dt-responsive nowrap" style="border-inline-color: red ;">
+                    <thead class="text-success">
                         
                         <th>Name</th>
                         <th>Position</th>
@@ -95,28 +280,28 @@ Startup Setup
                     </thead>
                     <tbody>
                         
-                        {% for i in range(40) %}
-                        <tr>
-                            <td>{{i}}Tiger Nixon</td>
-                            <td>{{i}}System Architect</td>
-                            <td>{{i}}Edinburgh</td>
-                            <td>{{i}}61</td>
-                            <td>20{{i}}/04/25</td>
-                            <td>$ {{i}}0,800</td>
-                        </tr>
+                        {% for i in range(10) %}
+                            <tr>
+                                <td>{{i}}Tiger Nixon</td>
+                                <td>{{i}}System Architect</td>
+                                <td>{{i}}Edinburgh</td>
+                                <td>{{i}}61</td>
+                                <td>20{{i}}/04/25</td>
+                                <td>$ {{i}}0,800</td>
+                            </tr>
                     
                         {% endfor %}
                     </tbody>
                 </table>
                 ` ).show();
                 tr.addClass('shown');
+                $("#testdata").DataTable({
+                    pageLength : 5,
+                    lengthMenu: [[5, 10, 20], [5, 10, 20]]
+                });
             }
         } );
+        */
 
-        /*/<!-- Table row Drag -->*/
-        
-        $(function () {
-            $('tbody').sortable();
-        });
     </script>
 {% endblock %}
