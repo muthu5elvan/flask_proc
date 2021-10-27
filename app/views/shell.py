@@ -6,10 +6,8 @@ shell_result_html = "shell/shell_result.html"
 
 @app.route("/shell/log",methods =["GET"])
 def shell_log():
-   if request.method == "GET":
-      return render_template(shell_log_html)
+   return render_template(shell_log_html)
 
 @app.route("/shell/result",methods =["GET"])
 def shell_result():
-   if request.method == "GET":
-      return render_template(shell_result_html)
+   return render_template(shell_result_html)

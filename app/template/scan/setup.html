@@ -20,51 +20,48 @@ Startup Setup
 {% from 'layout/header.html' import header %}
 {{header("Startup Setup")}}
 
-<div class="card">
+<div class="card" style="padding-right: 10px;">
     <div class="card-body overflow-auto">
 
         <h4 class="card-title">Scan Steps</h4>
         <p class="card-title-desc">
         </p>
 
-        <table id="datatable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px;">
+        <table id="datatable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px; min-width:100%;">
             <thead>
             <tr class="bg-primary">
-                <th style="width: 5px">#</th>
-                <th>Name</th>
-                <th>Position</th>
-                <th>Office</th>
-                <th>Age</th>
-                <th>Start date</th>
-                <th>Salary</th>
-                <th>Option</th>
+                <th style="min-width:5px">Expand</th>
+                <th >Id</th>
+                <th>Order</th>
+                <th>Command</th>
+                <th>Short Name</th>
+                <th>Description</th>
+                <th style="min-width:10px">Option</th>
             </tr>
             </thead>
 
 
             <tbody>
-                {% for i in range(40) %}
-                    <tr class="" onmousedown="removeChildTable(this)" title ="Hold and drag">
-                        <td ondblclick="addChildTable(this)" ><i class="ti-angle-down" title ="Double Click to Expand"></i></td>
-                        <td class="data-id">{{i}}Tiger Nixon</td>
-                        <td>{{i}}System Architect</td>
-                        <td>{{i}}Edinburgh</td>
-                        <td>{{i}}61</td>
-                        <td>20{{i}}/04/25</td>
-                        <td>${{i}}0,800</td>
-                        <td>
-                            <div class="btn-group mr-1 mt-2 ">
-                                <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
-                                <div class="dropdown-menu" style="min-width: 10px;">
-                                    <a class="dropdown-item" href="#">Edit</a>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item" href="#">Delete</a>
-                                </div>
+                <!-- <tr class="" onmousedown="removeChildTable(this)" title ="Hold and drag">
+                    <td ondblclick="addChildTable(this)" ><i class="ti-angle-down" title ="Double Click to Expand"></i></td>
+                    <td class="data-id">{{i}}Tiger Nixon</td>
+                    <td>{{i}}System Architect</td>
+                    <td>{{i}}Edinburgh</td>
+                    <td>{{i}}61</td>
+                    <td>20{{i}}/04/25</td>
+                    <td>${{i}}0,800</td>
+                    <td>
+                        <div class="btn-group mr-1 mt-2 ">
+                            <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                            <div class="dropdown-menu" style="min-width: 10px;">
+                                <a class="dropdown-item" href="#">Edit</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#">Delete</a>
                             </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </td>
+                </tr> -->
                 
-                {% endfor %}
             </tbody>
         </table>
 
@@ -83,9 +80,42 @@ Startup Setup
 
     <script>
         var table =$("#datatable").DataTable({
-            order: [],
+            //dom: "Bfrtip",
+            ajax:"/api/scan/setup",
+            order: [[ 1, 'asc' ]],
+            columns: [
+                { 
+                    data:"Expand",
+                    render:function(e){
+                        return `<i class="ti-angle-down" title ="Double Click to Expand" ondblclick="addChildTable(this.parentElement)"></i>`;
+                    } 
+                },
+                { data: "id" },
+                { data: "order" },
+                { data: "command" },
+                { data: "short_name" },
+                { data: "description" },
+                { 
+                    data: "option",
+                    render: function(e){
+                        return `
+                        <div class="btn-group mr-1 mt-2 ">
+                            <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                            <div class="dropdown-menu" style="min-width: 10px;">
+                                <a class="dropdown-item" href="#">Edit</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#">Delete</a>
+                            </div>
+                        </div>
+                        `;
+                    }
+                }
+            ],
             columnDefs: [
-                    { orderable: false, targets: 0, }
+                    { targets: 0, orderable: false, searchable : false},
+                    { targets: 1, width:"20px", visible : false, searchable : false },
+                    { targets: 2, width:"30px",},
+                    { targets: 6, orderable: false, width:"30px", searchable:false}
                 ]
         });
         /*/<!-- Table row Drag -->*/
@@ -120,8 +150,8 @@ Startup Setup
         function removeChildTable(firstCell){
             console.log("removechild table")
             table.row(table.$('tr.text-info')).child.hide()
-            $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
-            $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+            $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
+            $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
         }
         function addChildTable(firstCell){
             var child_table=`<table  id="testdata" class="table table-bordered dt-responsive nowrap" style="border-inline-color: red ;">
@@ -182,8 +212,8 @@ Startup Setup
                 
                 table_testdata.clear().destroy();
                     
-                $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
-                $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
+                $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
                 table.row(table.$('tr.text-info')).child.hide()
                 table.$('tr.text-info').removeClass("text-info")
                 $('#testdata').empty();
@@ -210,8 +240,8 @@ Startup Setup
                     console.log("search remove childtable")
                     table_testdata.clear().destroy();
                     
-                    $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
-                    $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                    $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
+                    $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
                     table.row(table.$('tr.text-info')).child.hide()
                     table.$('tr.text-info').removeClass("text-info")
                     $('#testdata').empty();
@@ -220,8 +250,8 @@ Startup Setup
                     console.log(e)
                     console.log("search error remove childtable")
                     table.row(table.$('tr.text-info')).child.hide()
-                    $(table.$('tr.text-info')).children().children().removeClass("ti-angle-double-down")
-                    $(table.$('tr.text-info')).children().children().addClass("ti-angle-down")
+                    $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
+                    $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
                     table.$('tr.text-info').removeClass("text-info")
                     $('#testdata').empty();
                     
