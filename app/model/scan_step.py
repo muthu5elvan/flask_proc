@@ -28,7 +28,7 @@ class Scan_Step(db.Model):
     
     id = sql.Column(sql.Integer, primary_key=True)
     
-    scan_name = sql.Column(sql.Integer, ForeignKey("scan_name.id"))
+    scan_name_id = sql.Column(sql.Integer, ForeignKey("scan_name.id"))
 
     order = sql.Column(sql.Integer(), index=True, unique=True)
     command = sql.Column(sql.Text(), index=True)
