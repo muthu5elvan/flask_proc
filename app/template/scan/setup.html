@@ -29,7 +29,7 @@ Startup Setup
 
         <table id="datatable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px; min-width:100%;">
             <thead>
-            <tr class="bg-primary">
+            <tr class="bg-primary" style="color: white;">
                 <th style="min-width:5px">Expand</th>
                 <th >Id</th>
                 <th>Order</th>
@@ -42,25 +42,6 @@ Startup Setup
 
 
             <tbody>
-                <!-- <tr class="" onmousedown="removeChildTable(this)" title ="Hold and drag">
-                    <td ondblclick="addChildTable(this)" ><i class="ti-angle-down" title ="Double Click to Expand"></i></td>
-                    <td class="data-id">{{i}}Tiger Nixon</td>
-                    <td>{{i}}System Architect</td>
-                    <td>{{i}}Edinburgh</td>
-                    <td>{{i}}61</td>
-                    <td>20{{i}}/04/25</td>
-                    <td>${{i}}0,800</td>
-                    <td>
-                        <div class="btn-group mr-1 mt-2 ">
-                            <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
-                            <div class="dropdown-menu" style="min-width: 10px;">
-                                <a class="dropdown-item" href="#">Edit</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#">Delete</a>
-                            </div>
-                        </div>
-                    </td>
-                </tr> -->
                 
             </tbody>
         </table>
@@ -79,15 +60,29 @@ Startup Setup
     <script src="/static/assets/libs/datatables.net-autofill-bs4/js/autoFill.bootstrap4.min.js"></script>
 
     <script>
-        var table =$("#datatable").DataTable({
+        var table =$("#datatable")
+            .on("dblclick",".addChildTable",function(){
+                console.log(table.data())
+                addChildTable(this)
+            })
+            .on("mousedown",".removeChildTable",function(){
+                removeChildTable(this)
+            })
+            .DataTable({
             //dom: "Bfrtip",
             ajax:"/api/scan/setup",
             order: [[ 1, 'asc' ]],
+            createdRow:function(row, data, index){
+                $(row).addClass("removeChildTable")
+            },
             columns: [
                 { 
                     data:"Expand",
                     render:function(e){
-                        return `<i class="ti-angle-down" title ="Double Click to Expand" ondblclick="addChildTable(this.parentElement)"></i>`;
+                        return `
+                                <i class="ti-angle-down" title ="Double Click to Expand"></i>
+                            
+                            `;
                     } 
                 },
                 { data: "id" },
@@ -112,7 +107,8 @@ Startup Setup
                 }
             ],
             columnDefs: [
-                    { targets: 0, orderable: false, searchable : false},
+                    
+                    { targets: 0, orderable: false, searchable : false,className : "addChildTable" },
                     { targets: 1, width:"20px", visible : false, searchable : false },
                     { targets: 2, width:"30px",},
                     { targets: 6, orderable: false, width:"30px", searchable:false}
@@ -154,31 +150,25 @@ Startup Setup
             $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
         }
         function addChildTable(firstCell){
-            var child_table=`<table  id="testdata" class="table table-bordered dt-responsive nowrap" style="border-inline-color: red ;">
-                <thead class="text-success">
-                    
-                    <th>Name</th>
-                    <th>Position</th>
-                    <th>Office</th>
-                    <th>Age</th>
-                    <th>Start date</th>
-                    <th>Salary</th>
+            var child_table=`
+            <table id="childtable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px; min-width:100%;">
+                <thead>
+                <tr class="text-success" style="">
+                    <th >Id</th>
+                    <th>Order</th>
+                    <th>Command</th>
+                    <th>Short Name</th>
+                    <th>Description</th>
+                    <th style="min-width:10px">Option</th>
+                </tr>
                 </thead>
+    
+    
                 <tbody>
                     
-                    {% for i in range(10) %}
-                        <tr>
-                            <td>{{i}}Tiger Nixon</td>
-                            <td>{{i}}System Architect</td>
-                            <td>{{i}}Edinburgh</td>
-                            <td>{{i}}61</td>
-                            <td>20{{i}}/04/25</td>
-                            <td>$ {{i}}0,800</td>
-                        </tr>
-                
-                    {% endfor %}
                 </tbody>
-            </table>`
+            </table>
+            `
             
             var icon=$(firstCell).children()[0]
             if($(table.$('tr.text-info')).length==0){
@@ -192,11 +182,43 @@ Startup Setup
                     icon.classList.replace("ti-angle-down","ti-angle-double-down")
 
                     
-                    table_testdata=$("#testdata").DataTable({
+                    table_testdata=$("#childtable").DataTable({
                         destroy:true,
                         pageLength : 5,
-                        lengthMenu: [[5, 10, 20], [5, 10, 20]]
+                        lengthMenu: [[5, 10, 20], [5, 10, 20]],
+                        ajax:"/api/scan/setup",
+                        order: [[ 1, 'asc' ]],
+                        columns:[
+                        
+                            { data: "id" },
+                            { data: "order" },
+                            { data: "command" },
+                            { data: "short_name" },
+                            { data: "description" },
+
+                            { 
+                                data: "option",
+                                render: function(e){
+                                    return `
+                                    <div class="btn-group mr-1 mt-2 ">
+                                        <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                                        <div class="dropdown-menu" style="min-width: 10px;">
+                                            <a class="dropdown-item" href="#">Edit</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">Delete</a>
+                                        </div>
+                                    </div>
+                                    `;
+                                }
+                            }
+                        ],
+                        columnDefs: [
+                            { targets: 0, width:"20px", visible : false, searchable : false },
+                            { targets: 1, width:"30px",},
+                            { targets: 5, orderable: false, width:"30px", searchable:false}
+                        ]
                     });
+                    $("#childtable tbody").sortable();
                     
                 }else{
                     console.log("remove childtable")
@@ -226,11 +248,44 @@ Startup Setup
                 icon.classList.replace("ti-angle-down","ti-angle-double-down")
 
                 
-                table_testdata=$("#testdata").DataTable({
+                table_testdata=$("#childtable").DataTable({
                     destroy:true,
                     pageLength : 5,
-                    lengthMenu: [[5, 10, 20], [5, 10, 20]]
+                    lengthMenu: [[5, 10, 20], [5, 10, 20]],
+                    ajax:"/api/scan/setup",
+                    order: [[ 1, 'asc' ]],
+                    columns:[
+                    
+                        { data: "id" },
+                        { data: "order" },
+                        { data: "command" },
+                        { data: "short_name" },
+                        { data: "description" },
+
+                        { 
+                            data: "option",
+                            render: function(e){
+                                return `
+                                <div class="btn-group mr-1 mt-2 ">
+                                    <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                                    <div class="dropdown-menu" style="min-width: 10px;">
+                                        <a class="dropdown-item" href="#">Edit</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="#">Delete</a>
+                                    </div>
+                                </div>
+                                `;
+                            }
+                        }
+                    ],
+                    columnDefs: [
+                        { targets: 0, width:"20px", visible : false, searchable : false },
+                        { targets: 1, width:"30px",},
+                        { targets: 5, orderable: false, width:"30px", searchable:false}
+                    ]
                 });
+
+                $("#childtable tbody").sortable();
                 
 
             }
