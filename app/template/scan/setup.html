@@ -10,8 +10,29 @@ Startup Setup
     <link href="/static/assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" type="text/css" />
     <link href="/static/assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="/static/assets/libs/datatables.net-autofill-bs4/css/autoFill.bootstrap4.min.css">
+    <link rel="stylesheet" href="/static/assets/libs/x-editable/bootstrap4-editable/css/bootstrap-editable.css">
+    <link rel="stylesheet" href="/static/assets/libs/bootstrap-switch/css/bootstrap4/bootstrap-switch.min.css">
+    <link rel="stylesheet" href="/static/assets/libs/bootstrap-taginput/tagsinput.css">
 
     <style>
+        .selected{
+            background-color: #eff2f7;
+            color: gray;
+            
+        }
+        .popover {
+            background-color: #2a3142;
+            color:white;
+        }
+        .popover-header{
+            background-color: #3a425a;
+            color:white;
+        }
+        
+        .editable-popup{top:0px !important;left:-10px !important;}
+        .editable-unsaved{
+            color: goldenrod;
+        }
     </style>
 
 {% endblock  %}
@@ -36,6 +57,7 @@ Startup Setup
                 <th>Command</th>
                 <th>Short Name</th>
                 <th>Description</th>
+                <th>Sub Command</th>
                 <th style="min-width:10px">Option</th>
             </tr>
             </thead>
@@ -45,7 +67,6 @@ Startup Setup
                 
             </tbody>
         </table>
-
     </div>
 </div>
 
@@ -56,84 +77,336 @@ Startup Setup
     <script src="/static/assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
     <script src="/static/assets/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
 
+
     <script src="/static/assets/libs/datatables.net-autofill/js/dataTables.autoFill.min.js"></script>
     <script src="/static/assets/libs/datatables.net-autofill-bs4/js/autoFill.bootstrap4.min.js"></script>
+    <script src="/static/assets/libs/datatables.net-select/js/dataTables.select.min.js"></script>
+    <script src="/static/assets/libs/bootstrap-taginput/tagsinput.js"></script>
+    
+    <script src="/static/assets/libs/x-editable/bootstrap4-editable/js/bootstrap-editable.js"></script>
+    <script src="/static/assets/js/x-editable-extend/boolean.js"></script>
+    <script src="/static/assets/js/x-editable-extend/string.js"></script>
+    <script src="/static/assets/js/x-editable-extend/array.js"></script>
 
     <script>
+        var datatable_get = "/api/datatable/datatable"
+        var datatable_child_table = "/api/datatable/fk/<table_name>/<column_name>/<fk_value>"
+        var x_editable_table = "/api/x_editable/<table_name>"
+        
+        var parent_table_name = "parentTable"
+        var child_table_name = "childTable"
+        
+        var datatable_obj ={}
+        var childDatatableEdit ={}
+        var datatableEdit={}
+
+        function x_editable_row(element,this_table,tableEditgroup,table_name){
+            if(tableEditgroup === undefined){
+                tableEditgroup={}
+            }
+            var tr_element=$(element).parent().parent().parent().parent()
+            var tr=this_table.row(tr_element)
+            var row_to_edit = tr_element.find("[datatable-cell-edit]")
+            if(row_to_edit.attr("datatable-cell-edit") =="true"){
+                element.text="Edit"
+                element.classList.replace("text-success","text-info")
+                
+                $.each(row_to_edit,function(row_to_edit_index){
+                    tableEditgroup[tr_element.attr("datatable-row-pk")][row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")].editable("destroy")
+                })
+                
+                row_to_edit.removeClass("text-warning")
+                
+                row_to_edit.attr("datatable-cell-edit",false)
+                $.each(tableEditgroup[tr_element.attr("datatable-row-pk")],function(valueIndex,valueObj){
+                    valueObj.editable("destroy")
+                })
+                
+                return tableEditgroup;
+            }else{
+                element.text="X - Edit"
+                element.classList.replace("text-info","text-success")
+                
+                row_to_edit.addClass("text-warning")
+                row_to_edit.attr("datatable-cell-edit",true)
+
+                if(tableEditgroup[tr_element.attr("datatable-row-pk")] === undefined){
+                    
+                tableEditgroup[tr_element.attr("datatable-row-pk")]={}
+                }
+
+                $.each(row_to_edit,function(row_to_edit_index){
+                    
+                    tableEditgroup[tr_element.attr("datatable-row-pk")][row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")]=
+                    
+                    tr_element.find(`[datatable-cell-name='${row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")}']`).editable({
+                        type: row_to_edit[row_to_edit_index].getAttribute("datatable-cell-type"),
+                        pk: tr_element.attr("datatable-row-pk"),
+                        value: tr.data()[row_to_edit[row_to_edit_index].getAttribute("id")],
+                        send: "always",
+                        url: x_editable_table
+                            .replace("<table_name>",table_name),
+                        params: function(params) {
+                            params.value = JSON.stringify(params.value)
+                            return params
+                        },
+                        success: function(response, newValue) {
+                            this_table.row(`[datatable-row-pk='${tr_element.attr("datatable-row-pk")}']`)
+                                .cell(`[datatable-cell-name='${row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")}']`)
+                                .data(newValue).draw("true")
+                            try{
+                                this_table.row(`[datatable-row-pk='${tr_element.attr("datatable-row-pk")}']`)
+                                    .cell(`.addChildTable`).data("").draw("true")}catch(e){}
+                        }
+                    });
+
+                })
+                
+                return tableEditgroup;
+            }
+        }
+
+        function addChildTable(firstCell,table,table_id){
+            
+            var icon=$(firstCell).children()[0]
+            var tr_row=$(firstCell).parent()
+            
+            var tr=table.row($(firstCell.parentElement))
+            var child_table=`
+                <table id="childtable${tr.data()['id']}" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px; min-width:100%;border-left-color: red;">
+                    <thead>
+                    <tr class="text-success" style="">
+                        <th >Id</th>
+                        <th>Order</th>
+                        <th>Command</th>
+                        <th>Short Name</th>
+                        <th>Description</th>
+                        <th>Sub Command</th>
+                        <th style="min-width:10px">Option</th>
+                    </tr>
+                    </thead>
+        
+        
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            `
+
+            if(icon.classList.contains("ti-angle-down")){
+
+                $(tr_row).addClass("text-info")
+                //console.log(tr)
+                tr.child(child_table).show()
+                icon.classList.replace("ti-angle-down","ti-angle-double-down")
+
+                datatable_obj[table_id] = $("#"+table_id)
+                .DataTable({
+                    destroy:true,
+                    pageLength : 5,
+                    lengthMenu: [[5, 10, 20], [5, 10, 20]],
+                    ajax: datatable_child_table
+                        .replace("<table_name>",child_table_name)
+                        .replace("<column_name>","id")
+                        .replace("<fk_value>",tr.data()["id"]),
+                    
+                    createdRow:modifyRowTR,
+                    select: {
+                        //className:"bg-light text-dark"
+                    },
+                    language: {
+                        select: {
+                            className:"",
+                            rows: {
+                                _: "    <i class='text-info'>No. of Rows %d</i> ",
+                                0: "    <i class='text-info'>Click a row to select it</i>",
+                            }
+                        }
+                    },
+                    order: [[ 0, 'asc' ]],
+                    columns:[].concat(datatable_column,datatable_column_modify_option),
+                    select: true,
+                    columnDefs: [
+                        { targets: 0, width:"20px", visible : false, searchable : false },
+                        { targets: 1, width:"30px",},
+                        { targets: 5, orderable: false, width:"30px", searchable:false},
+                        
+                        { targets:[1,2,3,4,5,] , createdCell:modifyCellTD },
+                    ]
+                });
+
+            }else{
+                
+                datatable_obj[table_id].clear().destroy();
+                    
+                $(icon).removeClass("ti-angle-double-down")
+                $(icon).addClass("ti-angle-down")
+                table.row(table.$(icon).parent().parent()).child.hide()
+                $(icon).parent().parent().removeClass("text-info")
+                $("#"+table_id).empty();
+
+            }
+        }
+
+        
+        var datatable_column = [
+            { data: "id" ,},
+            { data: "order",},
+            { data: "command",},
+            { data: "short_name",},
+            { data: "description", },
+            { data : "sub_command"},
+        ];
+        
+        var datatable_column_extend_child=[{ 
+            data:"Expand",
+            render:expandCellRender
+        }]
+
+        var datatable_column_modify_option=[{
+            data:"Option",
+            render:optionCellRender
+        }]
+
+
+        function expandCellRender(cell_data, type, row_data, meta){
+            //console.log(row_data["sub_command"])
+            if(row_data["sub_command"]){
+                
+                return `<i class="ti-angle-down" title ="Double Click to Expand"></i> `;
+
+            }
+            else{
+                return `<i class="fas fa-minus" title ="Double Click to Expand"></i>`;
+            }
+        } 
+        
+        function optionCellRender (e){
+            return `
+            <div class="btn-group mr-1 mt-2 ">
+                <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
+                <div class="dropdown-menu" style="min-width: 10px;">
+                    <a class="dropdown-item text-info" datatable-row-edit >Edit</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-warning"  datatable-row-swap >Swap</a>
+                    <a class="dropdown-item text-warning" datatable-row-move >Move</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" datatable-row-delete>Delete</a>
+                </div>
+            </div>
+            `;
+        }
+        
+        function modifyRowTR(row, data, index){
+            row.setAttribute("id","row-"+data["id"].toString())
+            row.setAttribute("datatable-row-pk",data["id"].toString())
+        }
+
+        function modifyCellTD(td, cellData, rowData, row_index, col_index) {
+            for (rowDataIndex in rowData){
+                if (rowData[rowDataIndex] == cellData && typeof(rowData[rowDataIndex]) == typeof(cellData)){
+                    td.setAttribute("datatable-cell-type",typeof(cellData))
+                    td.setAttribute("datatable-cell-pk", rowData["id"])
+                    td.setAttribute("datatable-cell-edit",false)
+                    td.setAttribute("datatable-cell-name",rowDataIndex)
+                    td.id = rowDataIndex
+                    return td
+                    
+                }
+            }
+          }
+
         var table =$("#datatable")
-            .on("dblclick",".addChildTable",function(){
-                console.log(table.data())
-                addChildTable(this)
+            .on("click", "[datatable-row-edit]",function(){
+                var tr_element =$(this).parent().parent().parent().parent()
+                //
+                //    Child data table edit
+                //
+                if(table.row(tr_element).data() === undefined){
+                    childDatatable_id ="childtable"+tr_element.parent().parent().parent().parent().parent().parent().parent().prev().attr("datatable-row-pk")
+                    if (childDatatableEdit[childDatatable_id] === undefined){
+
+                        childDatatableEdit[childDatatable_id]={}
+                        childDatatableEdit[childDatatable_id][tr_element.attr("datatable-cell-pk")]=
+                        x_editable_row(this,
+                                datatable_obj[childDatatable_id],
+                                childDatatableEdit[childDatatable_id][tr_element.attr("datatable-cell-pk")],
+                                child_table_name
+                            )
+                    }
+                    else{
+                        childDatatableEdit[childDatatable_id][tr_element.attr("datatable-cell-pk")]=
+                            x_editable_row(this,
+                                datatable_obj[childDatatable_id],
+                                childDatatableEdit[childDatatable_id][tr_element.attr("datatable-cell-pk")],
+                                child_table_name
+                            )
+
+                    }
+                    return ;
+                }
+                //
+                //    parent datatable edit
+                //
+
+                else{
+                    
+                    datatableEdit[tr_element.attr("datatable-cell-pk")] =
+                        x_editable_row(this,
+                            table,
+                            datatableEdit[tr_element.attr("datatable-cell-pk")],
+                            parent_table_name
+                        )
+                        return ;
+                }
             })
-            .on("mousedown",".removeChildTable",function(){
-                removeChildTable(this)
+            .on("click","[datatable-row-swap]",function(){
+                
+                var tr_element =$(this).parent().parent().parent().parent()
+                //
+                //    Child data table edit
+                //
+                if(table.row(tr_element).data() === undefined){
+                    childDatatable_id ="childtable"+tr_element.parent().parent().parent().parent().parent().parent().parent().prev().attr("datatable-row-pk")
+                    
+                }
+                //
+                //    parent datatable edit
+                //
+                else{
+
+                }
+            })
+            .on("dblclick",".addChildTable",function(){
+                addChildTable(this,table,"childtable"+$(this).parent().attr("datatable-row-pk"))
             })
             .DataTable({
-            //dom: "Bfrtip",
-            ajax:"/api/scan/setup",
-            order: [[ 1, 'asc' ]],
-            createdRow:function(row, data, index){
-                $(row).addClass("removeChildTable")
-            },
-            columns: [
-                { 
-                    data:"Expand",
-                    render:function(e){
-                        return `
-                                <i class="ti-angle-down" title ="Double Click to Expand"></i>
-                            
-                            `;
-                    } 
+                ajax: datatable_get,
+                select: {
                 },
-                { data: "id" },
-                { data: "order" },
-                { data: "command" },
-                { data: "short_name" },
-                { data: "description" },
-                { 
-                    data: "option",
-                    render: function(e){
-                        return `
-                        <div class="btn-group mr-1 mt-2 ">
-                            <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
-                            <div class="dropdown-menu" style="min-width: 10px;">
-                                <a class="dropdown-item" href="#">Edit</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#">Delete</a>
-                            </div>
-                        </div>
-                        `;
+                language: {
+                    select: {
+                        rows: {
+                            _: "    <i class='text-info'>No. of Rows %d</i> ",
+                            0: "    <i class='text-info'>Click a row to select it</i>",
+                        }
                     }
-                }
-            ],
-            columnDefs: [
-                    
-                    { targets: 0, orderable: false, searchable : false,className : "addChildTable" },
-                    { targets: 1, width:"20px", visible : false, searchable : false },
-                    { targets: 2, width:"30px",},
-                    { targets: 6, orderable: false, width:"30px", searchable:false}
-                ]
+                },
+                order: [[ 1, 'asc' ]],
+                createdRow:modifyRowTR,
+                columns: [].concat( datatable_column_extend_child, datatable_column, datatable_column_modify_option) ,
+
+                columnDefs: [
+                        { targets: 0, orderable: false, searchable : false,className : "addChildTable" },
+                        { targets: 1, width:"20px", visible : false, searchable : false, },
+                        { targets: 2, width:"30px",},
+                        { targets: 7, orderable: false, width:"30px", searchable:false},
+
+                        { targets:[2,3,4,5,6] , createdCell:modifyCellTD },
+                    ]
         });
-        /*/<!-- Table row Drag -->*/
         
-        $(function () {
-            $('tbody').sortable({
-                start: function (event, ui) {
-                    
-                    $(ui.item).addClass("text-info")
-                },
-                stop:function(event,ui){
-                    table.$('tr.text-info').removeClass('text-info');
-                },
-                update: function(event, ui) {
-                    $.each(table.$(".data-id").toArray(), function(index , row){
-                        
-                        console.log($(row).text())
-                    }) 
-                    
-                }
-            });
-        });
+
         const getMethods = (obj) => {
             let properties = new Set()
             let currentObj = obj
@@ -142,251 +415,6 @@ Startup Setup
             } while ((currentObj = Object.getPrototypeOf(currentObj)))
             return [...properties.keys()].filter(item => typeof obj[item] === 'function')
           }
-        
-        function removeChildTable(firstCell){
-            console.log("removechild table")
-            table.row(table.$('tr.text-info')).child.hide()
-            $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
-            $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
-        }
-        function addChildTable(firstCell){
-            var child_table=`
-            <table id="childtable" class="table table-bordered dt-responsive nowrap" style="padding-right: 10px; min-width:100%;">
-                <thead>
-                <tr class="text-success" style="">
-                    <th >Id</th>
-                    <th>Order</th>
-                    <th>Command</th>
-                    <th>Short Name</th>
-                    <th>Description</th>
-                    <th style="min-width:10px">Option</th>
-                </tr>
-                </thead>
-    
-    
-                <tbody>
-                    
-                </tbody>
-            </table>
-            `
-            
-            var icon=$(firstCell).children()[0]
-            if($(table.$('tr.text-info')).length==0){
-                if (icon.classList.contains("ti-angle-down")){
-                    console.log("add childtable")
-                    var tr=table.row($(firstCell.parentElement))
-                    var tr_row=$(firstCell).parent()
-                    $(tr_row).addClass("text-info")
-                    //console.log(tr)
-                    tr.child(child_table).show()
-                    icon.classList.replace("ti-angle-down","ti-angle-double-down")
-
-                    
-                    table_testdata=$("#childtable").DataTable({
-                        destroy:true,
-                        pageLength : 5,
-                        lengthMenu: [[5, 10, 20], [5, 10, 20]],
-                        ajax:"/api/scan/setup",
-                        order: [[ 1, 'asc' ]],
-                        columns:[
-                        
-                            { data: "id" },
-                            { data: "order" },
-                            { data: "command" },
-                            { data: "short_name" },
-                            { data: "description" },
-
-                            { 
-                                data: "option",
-                                render: function(e){
-                                    return `
-                                    <div class="btn-group mr-1 mt-2 ">
-                                        <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
-                                        <div class="dropdown-menu" style="min-width: 10px;">
-                                            <a class="dropdown-item" href="#">Edit</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Delete</a>
-                                        </div>
-                                    </div>
-                                    `;
-                                }
-                            }
-                        ],
-                        columnDefs: [
-                            { targets: 0, width:"20px", visible : false, searchable : false },
-                            { targets: 1, width:"30px",},
-                            { targets: 5, orderable: false, width:"30px", searchable:false}
-                        ]
-                    });
-                    $("#childtable tbody").sortable();
-                    
-                }else{
-                    console.log("remove childtable")
-                    var tr_row=$(firstCell).parent()
-                    $(tr_row).removeClass("text-info")
-                    var tr=table.row($(firstCell.parentElement))
-                    icon.classList.replace("ti-angle-double-down","ti-angle-down")
-                    tr.child().hide()
-                    
-                }
-                    
-            }else if(icon.classList.contains("ti-angle-down")){
-                
-                table_testdata.clear().destroy();
-                    
-                $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
-                $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
-                table.row(table.$('tr.text-info')).child.hide()
-                table.$('tr.text-info').removeClass("text-info")
-                $('#testdata').empty();
-
-                var tr=table.row($(firstCell.parentElement))
-                var tr_row=$(firstCell).parent()
-                $(tr_row).addClass("text-info")
-                //console.log(tr)
-                tr.child(child_table).show()
-                icon.classList.replace("ti-angle-down","ti-angle-double-down")
-
-                
-                table_testdata=$("#childtable").DataTable({
-                    destroy:true,
-                    pageLength : 5,
-                    lengthMenu: [[5, 10, 20], [5, 10, 20]],
-                    ajax:"/api/scan/setup",
-                    order: [[ 1, 'asc' ]],
-                    columns:[
-                    
-                        { data: "id" },
-                        { data: "order" },
-                        { data: "command" },
-                        { data: "short_name" },
-                        { data: "description" },
-
-                        { 
-                            data: "option",
-                            render: function(e){
-                                return `
-                                <div class="btn-group mr-1 mt-2 ">
-                                    <i class="ion ion-md-options dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
-                                    <div class="dropdown-menu" style="min-width: 10px;">
-                                        <a class="dropdown-item" href="#">Edit</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="#">Delete</a>
-                                    </div>
-                                </div>
-                                `;
-                            }
-                        }
-                    ],
-                    columnDefs: [
-                        { targets: 0, width:"20px", visible : false, searchable : false },
-                        { targets: 1, width:"30px",},
-                        { targets: 5, orderable: false, width:"30px", searchable:false}
-                    ]
-                });
-
-                $("#childtable tbody").sortable();
-                
-
-            }
-            else{
-                
-                try{
-                    console.log("search remove childtable")
-                    table_testdata.clear().destroy();
-                    
-                    $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
-                    $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
-                    table.row(table.$('tr.text-info')).child.hide()
-                    table.$('tr.text-info').removeClass("text-info")
-                    $('#testdata').empty();
-                    
-                }catch(e){
-                    console.log(e)
-                    console.log("search error remove childtable")
-                    table.row(table.$('tr.text-info')).child.hide()
-                    $($(table.$('tr.text-info')).children().children().get()[0]).removeClass("ti-angle-double-down")
-                    $($(table.$('tr.text-info')).children().children().get()[0]).addClass("ti-angle-down")
-                    table.$('tr.text-info').removeClass("text-info")
-                    $('#testdata').empty();
-                    
-                }
-
-            }
-            
-        }
-
-        /*$('tr').mousedown(function(event){
-            table.row($('tr.text-warning')).child.hide()
-            this.classList.add("text-warning")
-        });
-        $("tr").mouseup(function(event){
-            table.$('tr.text-warning').removeClass('text-warning');
-            table.$('tr.shown').removeClass('shown');
-        })
-        
-        /*      DELETE SELECTED ROW
-        $('#button').click( function () {
-            table.row('.selected').remove().draw( false );
-        } );*/
-        
-        /*
-        $('#datatable tbody').on('dblclick', 'tr td:first-child', function () {
-            var tr = $(this).closest('tr');
-            var row = table.row( tr );
-     
-            if ( row.child.isShown() ) {
-                // This row is already open - close it
-                row.child.hide();
-                tr.removeClass('shown');
-                tr.removeClass('text-info');
-            }
-            else {
-                
-                table.row(table.$('tr.text-info')).child.hide()
-                table.row($('tr.shown')).child.hide()
-                table.$('tr.text-info').removeClass('text-info');
-                table.$('tr.shown')
-                table.$('tr.shown').removeClass('shown');
-
-                tr.addClass('text-info');
-                
-                // Open this row
-                row.child( `
-                <table  id="testdata" class="table table-bordered dt-responsive nowrap" style="border-inline-color: red ;">
-                    <thead class="text-success">
-                        
-                        <th>Name</th>
-                        <th>Position</th>
-                        <th>Office</th>
-                        <th>Age</th>
-                        <th>Start date</th>
-                        <th>Salary</th>
-                    </thead>
-                    <tbody>
-                        
-                        {% for i in range(10) %}
-                            <tr>
-                                <td>{{i}}Tiger Nixon</td>
-                                <td>{{i}}System Architect</td>
-                                <td>{{i}}Edinburgh</td>
-                                <td>{{i}}61</td>
-                                <td>20{{i}}/04/25</td>
-                                <td>$ {{i}}0,800</td>
-                            </tr>
-                    
-                        {% endfor %}
-                    </tbody>
-                </table>
-                ` ).show();
-                tr.addClass('shown');
-                $("#testdata").DataTable({
-                    pageLength : 5,
-                    lengthMenu: [[5, 10, 20], [5, 10, 20]]
-                });
-            }
-        } );
-        */
 
     </script>
 {% endblock %}
