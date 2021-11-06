@@ -32,7 +32,7 @@ def datatable_get_table(table_name):
             }
         )
     print({"table_name":table_name,})
-    return jsonify(**scan_step_table_json_data)
+    return jsonify(scan_step_table_json_data)
 
 # 
 # child table data
@@ -65,25 +65,40 @@ def datatable_fk_data(table_name,column_name,fk_value):
             }
         )
     print({"table_name":table_name,})
-    return jsonify(**scan_step_table_json_data)
+    return jsonify(scan_step_table_json_data)
 
 # 
 # Insert data into table
 # 
+"""
+Example
+URL Option : /api/datatable/<table_name>
+URL : /api/datatable/parent_table
+POST Data : {
+    {'command': 'command 1', 'description': 'description1s', 'id': 1, 'order': 2, 'short_name': ['short_name1', 123], 'sub_command': False},
+} 
+
+"""
 @app.route("/api/datatable/<table_name>",methods =["POST"])
-def datatable_post_table(table_name):
+def datatable_create_row(table_name):
     print("table_name : "+table_name)
     print(request.form.to_dict())
-    return jsonify(**request.get_json())
+    return jsonify(request.get_json())
 
 # 
 # Delete row in the table
 # 
+"""
+Example 
+URL OPTION : /api/datatable/<table_name>/<pk_id>
+URL : /api/datatable/parent_table/12
+
+"""
 @app.route("/api/datatable/<table_name>/<pk_id>",methods =["DELETE"])
-def datatable_delete_table(table_name,pk_id):
+def datatable_delete_row(table_name,pk_id):
     print("table_name : ",table_name)
     print("id : ",pk_id)
-    return jsonify(**request.get_json())
+    return jsonify(request.get_json())
 
 # 
 # Swap row in the table
@@ -99,7 +114,7 @@ Post Data : [
 Response Data : 
 """
 @app.route("/api/datatable/swap/<table_name>",methods=["POST"])
-def datatable_swap_column(table_name):
+def datatable_swap_row(table_name):
     print("table_name : ",table_name)
     print(request.get_json())
 
@@ -108,4 +123,29 @@ def datatable_swap_column(table_name):
     # response_data["__msg"]["color"] = 
     response_data["__msg"]["heading"] =  "Column Swap "
     response_data["__msg"]["text"] = "Column is Swap and updated"
+    return jsonify(response_data)
+
+# 
+# Move row in the table
+# 
+"""
+Example 
+URL OPTION : /api/datatable/move/<table_name>
+URl : /api/datatable/move/childtable
+Post Data : {
+    "move" : {'command': 'command 1', 'description': 'description1s', 'id': 1, 'order': 2, 'short_name': ['short_name1', 123], 'sub_command': False},
+    "find" : {'command': 'command 0', 'description': 'description0', 'id': 0, 'order': 1, 'short_name': ['short_name0', 123], 'sub_command': True}
+    }
+Response Data : 
+"""
+@app.route("/api/datatable/move/<table_name>",methods=["POST"])
+def datatable_move_row(table_name):
+    print("table_name : ",table_name)
+    print(request.get_json())
+
+    response_data={}    
+    response_data["__msg"]={}
+    # response_data["__msg"]["color"] = 
+    response_data["__msg"]["heading"] =  "Row Move "
+    response_data["__msg"]["text"] = "Row is Moved and updated"
     return jsonify(response_data)
