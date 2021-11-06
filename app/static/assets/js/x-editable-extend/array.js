@@ -26,7 +26,19 @@
         // assign value to input
         value2input: function(value) {
             this.$tpl.find("div.bootstrap-tagsinput").addClass("bg-light")
-            this.$tpl.find("div.bootstrap-tagsinput").sortable();
+            this.$tpl.find("div.bootstrap-tagsinput").sortable({
+                update: function(event, ui) {
+                    try{
+                        var input_array=[]
+                        $.each(this.$tpl.find("div.bootstrap-tagsinput").find("span"),function(index,spanElement){
+                            if ($(spanElement).text() !=""){
+                                input_array.push($(spanElement).text())
+                            }
+                        })
+                        this.$input.val(input_array)
+                    }catch(e){}
+                }
+            });
             this.$tpl.find("div.bootstrap-tagsinput").find("input").attr("size","1")
             this.$input.tagsinput("add",value)
         },
@@ -49,7 +61,7 @@
         // change type extracted value
         value2str: function(value) {
             this.$input.val(value)
-            console.log(value)
+            //console.log(value)
             try{
                 return value;
             }catch(e){

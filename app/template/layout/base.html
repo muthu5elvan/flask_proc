@@ -17,7 +17,24 @@
 
     <link href="/static/assets/libs/jquery-ui-dist/jquery-ui.min.css">
 
+    <link rel="stylesheet" href="/static/assets/libs/bootstrap-toastr/jquery.toast.min.css">
+
     <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            
+            border-radius: 6px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            border-radius: 6px;
+            background-color:#fff;
+            -webkit-box-shadow: inset 0 0 6px rgba(90,90,90,0.7);
+        }
+
         .editable-buttons{
             transform: translate(0, 30%);
         }
@@ -71,6 +88,9 @@
     </div>
     <!-- END layout-wrapper -->
 
+    
+    </div>
+
     <!-- JAVASCRIPT -->
     <script src="/static/assets/libs/jquery/jquery.min.js"></script>
     <script src="/static/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -86,9 +106,40 @@
 
     <script src="/static/assets/js/app.js"></script>
 
+    <script src="/static/assets/libs/bootstrap-toastr/jquery.toast.min.js"></script>
+
     
     {% block script %}
     {% endblock %}
+
+    <script>
+        //$('#toastrr').toast('hide')
+        jQuery.ajaxSetup({
+            dataFilter: function (data, type) {
+                try{
+                    data_j=JSON.parse(data)
+
+                    if(data_j["__msg"] != undefined){
+                        $.toast({
+                            allowToastClose : true,
+                            hideAfter: 5000,
+                            position: 'top-right',
+
+                            bgColor:data_j["__msg"]["color"],
+                            heading: data_j["__msg"]["heading"],
+                            text : data_j["__msg"]["text"]
+                        })
+
+                    }
+                }
+                catch(e){console.log(e)}
+                
+                //modify the data
+
+                return data;
+            }
+        });
+    </script>
 
 </body>
 

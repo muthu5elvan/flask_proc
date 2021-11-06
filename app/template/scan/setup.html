@@ -92,6 +92,7 @@ Startup Setup
         var datatable_get = "/api/datatable/datatable"
         var datatable_child_table = "/api/datatable/fk/<table_name>/<column_name>/<fk_value>"
         var x_editable_table = "/api/x_editable/<table_name>"
+        var datatable_swap_row = "/api/datatable/swap/<table_name>"
         
         var parent_table_name = "parentTable"
         var child_table_name = "childTable"
@@ -100,11 +101,26 @@ Startup Setup
         var childDatatableEdit ={}
         var datatableEdit={}
 
+        var column_pk_name  =  "id"
+        var column_swap_stable = "order"
+
+        var datatable_column = [
+            { data: "id" ,},
+            { data: "order",},
+            { data: "command",},
+            { data: "short_name",},
+            { data: "description", },
+            { data : "sub_command"},
+        ];
+        
+
         function x_editable_row(element,this_table,tableEditgroup,table_name){
             if(tableEditgroup === undefined){
                 tableEditgroup={}
             }
             var tr_element=$(element).parent().parent().parent().parent()
+            
+            console.log(this_table)
             var tr=this_table.row(tr_element)
             var row_to_edit = tr_element.find("[datatable-cell-edit]")
             if(row_to_edit.attr("datatable-cell-edit") =="true"){
@@ -131,32 +147,33 @@ Startup Setup
                 row_to_edit.attr("datatable-cell-edit",true)
 
                 if(tableEditgroup[tr_element.attr("datatable-row-pk")] === undefined){
-                    
-                tableEditgroup[tr_element.attr("datatable-row-pk")]={}
+                    tableEditgroup[tr_element.attr("datatable-row-pk")]={}
                 }
 
                 $.each(row_to_edit,function(row_to_edit_index){
-                    
                     tableEditgroup[tr_element.attr("datatable-row-pk")][row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")]=
                     
                     tr_element.find(`[datatable-cell-name='${row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")}']`).editable({
                         type: row_to_edit[row_to_edit_index].getAttribute("datatable-cell-type"),
                         pk: tr_element.attr("datatable-row-pk"),
-                        value: tr.data()[row_to_edit[row_to_edit_index].getAttribute("id")],
+                        value: tr.data()[row_to_edit[row_to_edit_index].getAttribute(column_pk_name)],
                         send: "always",
                         url: x_editable_table
                             .replace("<table_name>",table_name),
+                        ajaxOptions: {contentType: 'application/json', dataType: 'json'},
                         params: function(params) {
-                            params.value = JSON.stringify(params.value)
-                            return params
+                            //params.value = JSON.stringify(params.value)
+                            return JSON.stringify(params)
                         },
                         success: function(response, newValue) {
-                            this_table.row(`[datatable-row-pk='${tr_element.attr("datatable-row-pk")}']`)
-                                .cell(`[datatable-cell-name='${row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")}']`)
-                                .data(newValue).draw("true")
                             try{
-                                this_table.row(`[datatable-row-pk='${tr_element.attr("datatable-row-pk")}']`)
-                                    .cell(`.addChildTable`).data("").draw("true")}catch(e){}
+                                
+                                updated_row_value=this_table.row(tr_element)
+                                .data()
+                                updated_row_value[row_to_edit[row_to_edit_index].getAttribute("datatable-cell-name")]=newValue
+                                this_table.row(tr_element).data(updated_row_value).draw("true")
+                                //this_table.row(tr_element).draw("true")
+                            }catch(e){console.log(e)}
                         }
                     });
 
@@ -166,7 +183,7 @@ Startup Setup
             }
         }
 
-        function addChildTable(firstCell,table,table_id){
+        function addChildTable(firstCell,table,){//table_id){
             
             var icon=$(firstCell).children()[0]
             var tr_row=$(firstCell).parent()
@@ -196,19 +213,21 @@ Startup Setup
             if(icon.classList.contains("ti-angle-down")){
 
                 $(tr_row).addClass("text-info")
+                
+
                 //console.log(tr)
                 tr.child(child_table).show()
                 icon.classList.replace("ti-angle-down","ti-angle-double-down")
-
-                datatable_obj[table_id] = $("#"+table_id)
+                datatable_obj[`childtable${tr.data()['id']}`] = $("#"+`childtable${tr.data()['id']}`)
                 .DataTable({
+                    responsive: true,
                     destroy:true,
                     pageLength : 5,
                     lengthMenu: [[5, 10, 20], [5, 10, 20]],
                     ajax: datatable_child_table
                         .replace("<table_name>",child_table_name)
-                        .replace("<column_name>","id")
-                        .replace("<fk_value>",tr.data()["id"]),
+                        .replace("<column_name>",column_pk_name)
+                        .replace("<fk_value>",tr.data()[column_pk_name]),
                     
                     createdRow:modifyRowTR,
                     select: {
@@ -237,27 +256,17 @@ Startup Setup
 
             }else{
                 
-                datatable_obj[table_id].clear().destroy();
+                datatable_obj[`childtable${tr.data()['id']}`].clear().destroy();
                     
                 $(icon).removeClass("ti-angle-double-down")
                 $(icon).addClass("ti-angle-down")
                 table.row(table.$(icon).parent().parent()).child.hide()
                 $(icon).parent().parent().removeClass("text-info")
-                $("#"+table_id).empty();
+                $("#"+`childtable${tr.data()['id']}`).remove();
 
             }
         }
 
-        
-        var datatable_column = [
-            { data: "id" ,},
-            { data: "order",},
-            { data: "command",},
-            { data: "short_name",},
-            { data: "description", },
-            { data : "sub_command"},
-        ];
-        
         var datatable_column_extend_child=[{ 
             data:"Expand",
             render:expandCellRender
@@ -270,8 +279,9 @@ Startup Setup
 
 
         function expandCellRender(cell_data, type, row_data, meta){
+            
             //console.log(row_data["sub_command"])
-            if(row_data["sub_command"]){
+            if(row_data["sub_command"] === true || row_data["sub_command"]==="true"){
                 
                 return `<i class="ti-angle-down" title ="Double Click to Expand"></i> `;
 
@@ -288,7 +298,7 @@ Startup Setup
                 <div class="dropdown-menu" style="min-width: 10px;">
                     <a class="dropdown-item text-info" datatable-row-edit >Edit</a>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-warning"  datatable-row-swap >Swap</a>
+                    <a class="dropdown-item text-warning"  datatable-row-swap-order >Swap Order</a>
                     <a class="dropdown-item text-warning" datatable-row-move >Move</a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item text-danger" datatable-row-delete>Delete</a>
@@ -298,15 +308,15 @@ Startup Setup
         }
         
         function modifyRowTR(row, data, index){
-            row.setAttribute("id","row-"+data["id"].toString())
-            row.setAttribute("datatable-row-pk",data["id"].toString())
+            row.setAttribute("id","row-"+data[column_pk_name].toString())
+            row.setAttribute("datatable-row-pk",data[column_pk_name].toString())
         }
 
         function modifyCellTD(td, cellData, rowData, row_index, col_index) {
             for (rowDataIndex in rowData){
                 if (rowData[rowDataIndex] == cellData && typeof(rowData[rowDataIndex]) == typeof(cellData)){
                     td.setAttribute("datatable-cell-type",typeof(cellData))
-                    td.setAttribute("datatable-cell-pk", rowData["id"])
+                    td.setAttribute("datatable-cell-pk", rowData[column_pk_name])
                     td.setAttribute("datatable-cell-edit",false)
                     td.setAttribute("datatable-cell-name",rowDataIndex)
                     td.id = rowDataIndex
@@ -323,7 +333,8 @@ Startup Setup
                 //    Child data table edit
                 //
                 if(table.row(tr_element).data() === undefined){
-                    childDatatable_id ="childtable"+tr_element.parent().parent().parent().parent().parent().parent().parent().prev().attr("datatable-row-pk")
+                    childDatatable_id ="childtable"+table.row(tr_element.parent().parent().parent().parent().parent().parent().parent().prev()).data()[column_pk_name]
+                    console.log(childDatatable_id)
                     if (childDatatableEdit[childDatatable_id] === undefined){
 
                         childDatatableEdit[childDatatable_id]={}
@@ -360,25 +371,143 @@ Startup Setup
                         return ;
                 }
             })
-            .on("click","[datatable-row-swap]",function(){
+            .on("click","[datatable-row-swap-order]",function(){
                 
                 var tr_element =$(this).parent().parent().parent().parent()
                 //
                 //    Child data table edit
                 //
                 if(table.row(tr_element).data() === undefined){
-                    childDatatable_id ="childtable"+tr_element.parent().parent().parent().parent().parent().parent().parent().prev().attr("datatable-row-pk")
+                    console.log("child table")
+                    tr_element = tr_element.parent().parent().parent().parent().parent().parent().parent().prev()
+                    childDatatable_id ="childtable"+table.row(tr_element).data()[column_pk_name]
+                    child_table_datatable_obj = datatable_obj[childDatatable_id]
+                    tr_element =$(this).parent().parent().parent().parent()
+                    //console.log(tr_element)
+                    if (tr_element.attr("datatable-swap") === undefined){
+                        tr_element.attr("datatable-swap","")
+                        tr_element.addClass("text-danger")
+                        $(this).text("Swap Enable")
+                        console.log(child_table_datatable_obj.rows(tr_element.parent().find("[datatable-swap]")).data())
+                        if(child_table_datatable_obj.rows().data().length == 2){
+                            var row_data = []
+                            var row_element=[]
+
+                            $.each(tr_element.parent().find("[datatable-swap]"),function(index,element){
+                                row_element.push(element)
+                                row_data.push(child_table_datatable_obj.row(element).data())
+                            })
+                            console.log(row_element[0])
+                            var temp_1 = child_table_datatable_obj.row(row_element[0]).data()
+
+                            var temp_pk_1 = temp_1[column_pk_name]
+                            var temp_stable_1 = temp_1[column_swap_stable]
+                            
+                            var temp_2 = child_table_datatable_obj.row(row_element[1]).data()
+                            var temp_pk_2 = temp_2[column_pk_name]
+                            var temp_stable_2 = temp_2[column_swap_stable]
+
+                            //temp_1[column_pk_name] = temp_pk_2
+                            //temp_2[column_pk_name] = temp_pk_1
+
+                            temp_1[column_swap_stable] = temp_stable_2
+                            temp_2[column_swap_stable] = temp_stable_1
+                            console.log(temp_1,temp_2)
+                            $.ajax({
+                                url: datatable_swap_row.replace("<table_name>",child_table_name),
+                                dataType: 'JSON',
+                                type: "POST",
+                                contentType:"application/json",
+                                data: JSON.stringify([temp_1,temp_2]),
+                                success: function(data){
+                                    //alert("success" + data);
+                                    child_table_datatable_obj.row(row_element[0]).data(temp_2).draw("true")
+                                    child_table_datatable_obj.row(row_element[1]).data(temp_1).draw("true")
+                                }
+                            })
+                        }
+
+                    }else{
+                        tr_element[0].removeAttribute("datatable-swap")
+                        tr_element.removeClass("text-danger")
+                        $(this).text("Swap Order")
+                    }
                     
+                    /*
+                    var row1Data = child_table_datatable_obj.row(tr_element).data()
+                    var row2Data = child_table_datatable_obj.row(tr_element).data()
+
+                    datatable.row(row1Index).data(row2Data).draw();
+                    datatable.row(row2Index).data(row1Data).draw();
+                    */
                 }
                 //
                 //    parent datatable edit
                 //
                 else{
+                    
+                    console.log("parent table")
 
+                    
+                    if (tr_element.attr("datatable-swap") === undefined){
+                        tr_element.attr("datatable-swap","")
+                        tr_element.addClass("text-danger")
+                        $(this).text("Swap Enable")
+                        if(table.rows("[datatable-swap]").data().length == 2){
+                            var row_data = []
+                            var row_element=[]
+
+                            $.each($("[datatable-swap]"),function(index,element){
+                                row_element.push(element)
+                                row_data.push(table.row(element).data())
+                            })
+                            console.log(row_data,row_element)
+                            var temp_1 = table.row(row_element[0]).data()
+
+                            var temp_pk_1 = temp_1[column_pk_name]
+                            var temp_stable_1 = temp_1[column_swap_stable]
+                            
+                            var temp_2 = table.row(row_element[1]).data()
+                            var temp_pk_2 = temp_2[column_pk_name]
+                            var temp_stable_2 = temp_2[column_swap_stable]
+
+                            //temp_1[column_pk_name] = temp_pk_2
+                            //temp_2[column_pk_name] = temp_pk_1
+
+                            temp_1[column_swap_stable] = temp_stable_2
+                            temp_2[column_swap_stable] = temp_stable_1
+                            console.log(temp_1,temp_2)
+                            $.ajax({
+                                url: datatable_swap_row.replace("<table_name>",parent_table_name),
+                                dataType: 'JSON',
+                                type: "POST",
+                                contentType:"application/json",
+                                data: JSON.stringify([temp_1,temp_2]),
+                                success: function(data){
+                                    //alert("success" + data);
+                                    table.row(row_element[0]).data(temp_2).draw("true")
+                                    table.row(row_element[1]).data(temp_1).draw("true")
+                                }
+                            })
+                        }
+
+                    }else{
+                        tr_element[0].removeAttribute("datatable-swap")
+                        tr_element.removeClass("text-danger")
+                        $(this).text("Swap Order")
+                    }
+                    /*
+                    var row1Data = table.row(tr_element).data()
+                    var row2Data = table.row(tr_element).data()
+                    */
                 }
+                
             })
-            .on("dblclick",".addChildTable",function(){
-                addChildTable(this,table,"childtable"+$(this).parent().attr("datatable-row-pk"))
+            .on("click","[datatable-row-move]",function(){
+                
+            })
+            .on("click",".addChildTable",function(){
+                addChildTable(this,table,)//"childtable"+$(this).parent().attr("datatable-row-pk"))
             })
             .DataTable({
                 ajax: datatable_get,
