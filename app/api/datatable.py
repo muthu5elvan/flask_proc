@@ -1,6 +1,7 @@
 from flask import json, jsonify,request
 from app import app
 from uuid import uuid1
+from app.utlity import form_io
 
 # 
 # Parent table data
@@ -66,6 +67,37 @@ def datatable_fk_data(table_name,column_name,fk_value):
         )
     print({"table_name":table_name,})
     return jsonify(scan_step_table_json_data)
+
+# 
+# Insert data into table
+# 
+"""
+Example
+URL Option : /api/datatable/<table_name>/form
+URL : /api/datatable/parent_table
+Response Data : {
+    {'command': 'command 1', 'description': 'description1s', 'id': 1, 'order': 2, 'short_name': ['short_name1', 123], 'sub_command': False},
+} 
+
+"""
+@app.route("/api/datatable/<table_name>/form",methods =["GET"])
+def datatable_row_form(table_name):
+    print("table_name : "+table_name)
+    print("form")
+    form_json = {
+    "display":"form",
+    "type":"form",
+    "components": [
+        form_io.array("test","test2"),
+        {
+            "type": "button",
+            "label": "Submit",
+            "key": "submit",
+            "input": True,
+        }
+    ]
+    }
+    return jsonify(form_json)
 
 # 
 # Insert data into table

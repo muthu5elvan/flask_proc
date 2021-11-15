@@ -16,6 +16,8 @@ Startup Setup
     <!-- Sweet Alert-->
     <link href="/static/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css" />
 
+    <link rel='stylesheet' href='https://cdn.form.io/formiojs/formio.full.min.css'> 
+
     <style>
         .selected{
             background-color: #eff2f7;
@@ -73,7 +75,8 @@ Startup Setup
             Insert Row
         </button>
         <div class="collapse" id="parentTableRowInsert" style="padding-top: 10px;">
-            <div class="card card-body mb-0" id="insertFormData">
+            <div class="card card-body mb-0" id="formio">
+
             </div>
         </div>
     </div>
@@ -86,22 +89,48 @@ Startup Setup
     <script src="/static/assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
     <script src="/static/assets/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
 
-
-    <script src="/static/assets/libs/datatables.net-autofill/js/dataTables.autoFill.min.js"></script>
-    <script src="/static/assets/libs/datatables.net-autofill-bs4/js/autoFill.bootstrap4.min.js"></script>
     <script src="/static/assets/libs/datatables.net-select/js/dataTables.select.min.js"></script>
+    
+    <!-- JSONFORM -->
+    <script src="/static/assets/libs/jsonform/lib/jsonform.js"></script>
+    
+    <script src="/static/assets/libs/jsonform/deps/underscore.js"></script>
+    <script src="/static/assets/libs/jsonform/deps/opt/jsv.js"></script>
+    
+    <!-- tagsinput -->
     <script src="/static/assets/libs/bootstrap-taginput/tagsinput.js"></script>
     
+    <!-- X-Editable -->
     <script src="/static/assets/libs/x-editable/bootstrap4-editable/js/bootstrap-editable.js"></script>
     <script src="/static/assets/js/x-editable-extend/boolean.js"></script>
     <script src="/static/assets/js/x-editable-extend/string.js"></script>
     <script src="/static/assets/js/x-editable-extend/array.js"></script>
 
-    
+    <script src='https://cdn.form.io/formiojs/formio.full.min.js'></script>
+
     <!-- Sweet Alerts js -->
     <script src="/static/assets/libs/sweetalert2/sweetalert2.min.js"></script>
 
     <script>
+    </script>
+
+    <script>
+
+        $.ajax({
+            url : "http://127.0.0.1:5000/api/datatable/<table_name>/form" ,
+            type: "GET",
+            success: function(data){
+                Formio.createForm(document.getElementById('formio'),data).then(function(form){
+                    console.log(form)
+                    form.on("submit",function(event){
+                        console.log(event)
+                        $("ul.editgrid-listgroup").sortable()
+                    })
+
+                })
+            }
+        })
+
         var datatable_get = "/api/datatable/datatable"
         var datatable_child_table = "/api/datatable/fk/<table_name>/<column_name>/<fk_value>"
         var x_editable_table = "/api/x_editable/<table_name>"
@@ -725,14 +754,5 @@ Startup Setup
                     ]
         });
         
-        const getMethods = (obj) => {
-            let properties = new Set()
-            let currentObj = obj
-            do {
-              Object.getOwnPropertyNames(currentObj).map(item => properties.add(item))
-            } while ((currentObj = Object.getPrototypeOf(currentObj)))
-            return [...properties.keys()].filter(item => typeof obj[item] === 'function')
-          }
-
     </script>
 {% endblock %}
